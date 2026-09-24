@@ -60,6 +60,18 @@ class Exam extends Model
         return $this->secondsRemaining() > 0;
     }
 
+    /**
+     * A prova expirou pelo tempo limite?
+     */
+    public function isExpired(): bool
+    {
+        if (! $this->activated_at) {
+            return false;
+        }
+
+        return $this->secondsRemaining() <= 0;
+    }
+
     public function questions(): HasMany
     {
         return $this->hasMany(Question::class)->orderBy('order');
