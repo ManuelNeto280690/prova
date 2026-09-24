@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/provas/{exam}/iniciar', [StudentExamController::class, 'start'])->name('exam.start');
     Route::get('/provas/{exam}', [StudentExamController::class, 'show'])->name('exam.show');
     Route::post('/provas/{exam}/enviar', [StudentExamController::class, 'submit'])->name('exam.submit');
+    Route::post('/provas/{exam}/registrar-violacao', [StudentExamController::class, 'recordViolation'])->name('exam.violation');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

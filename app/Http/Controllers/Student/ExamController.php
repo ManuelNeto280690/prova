@@ -35,6 +35,8 @@ class ExamController extends Controller
                     'description' => $exam->description,
                     'duration_minutes' => $exam->duration_minutes,
                     'questions_count' => $exam->questions_count,
+                    'released' => $exam->isAvailable(),
+                    'available_at' => $exam->available_at?->format('d/m/Y \à\s H:i'),
                     'attempt' => $attempt ? [
                         'status' => $attempt->status,
                         'score' => $attempt->score,
@@ -66,6 +68,19 @@ class ExamController extends Controller
                 ->with('flash', 'Você já concluiu esta prova.');
         }
 
+        // Scheduled release: cannot start before the admin-defined time.
+        // (Server-side guard — the front-end also blocks it.)
+        if (! $attempt->exists && ! $exam->isAvailable()) {
+            $when = $exam->available_at?->format('d/m/Y \à\s H:i');
+
+            return redirect()->route('student.dashboard')->with(
+                'warning',
+                $when
+                    ? "A prova ainda não foi liberada. Ela estará disponível em {$when}."
+                    : 'A prova ainda não foi liberada pelo administrador.'
+            );
+        }
+
         if (! $attempt->exists) {
             if ($exam->questions()->count() === 0) {
                 return redirect()->route('student.dashboard')
@@ -91,6 +106,12 @@ class ExamController extends Controller
             ->first();
 
         if (! $attempt) {
+            // No attempt yet and not released → send back with a notice.
+            if (! $exam->isAvailable()) {
+                return redirect()->route('student.dashboard')
+                    ->with('warning', 'A prova ainda não foi liberada pelo administrador.');
+            }
+
             return redirect()->route('student.dashboard');
         }
 
@@ -131,7 +152,29 @@ class ExamController extends Controller
                 ])->values(),
             ])->values(),
             'secondsRemaining' => $attempt->secondsRemaining(),
+            'violationsCount' => (int) ($attempt->violations_count ?? 0),
         ]);
+    }
+
+    /**
+     * Record a security violation (e.g. exit fullscreen, tab switch).
+     */
+    public function recordViolation(Request $request, Exam $exam): \Illuminate\Http\JsonResponse
+    {
+        $attempt = Attempt::where('user_id', $request->user()->id)
+            ->where('exam_id', $exam->id)
+            ->first();
+
+        if ($attempt && ! $attempt->isFinished()) {
+            $attempt->increment('violations_count');
+
+            return response()->json([
+                'success' => true,
+                'violations_count' => $attempt->violations_count,
+            ]);
+        }
+
+        return response()->json(['success' => false], 400);
     }
 
     /**
@@ -152,7 +195,13 @@ class ExamController extends Controller
             'answers' => ['array'],
             'answers.*' => ['nullable', 'integer'],
             'auto' => ['boolean'],
+            'violations_count' => ['nullable', 'integer'],
         ]);
+
+        if (isset($validated['violations_count']) && $validated['violations_count'] > $attempt->violations_count) {
+            $attempt->violations_count = $validated['violations_count'];
+            $attempt->save();
+        }
 
         // Even a manual submit is treated as expired if the server clock is up.
         $expired = $attempt->secondsRemaining() <= 0 || ($validated['auto'] ?? false);

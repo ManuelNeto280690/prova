@@ -26,6 +26,7 @@ class Attempt extends Model
         'total_questions',
         'correct_count',
         'score',
+        'violations_count',
     ];
 
     protected function casts(): array

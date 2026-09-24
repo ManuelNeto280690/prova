@@ -16,6 +16,7 @@ class Exam extends Model
         'description',
         'duration_minutes',
         'is_published',
+        'available_at',
         'created_by',
     ];
 
@@ -24,7 +25,21 @@ class Exam extends Model
         return [
             'is_published' => 'boolean',
             'duration_minutes' => 'integer',
+            'available_at' => 'datetime',
         ];
+    }
+
+    /**
+     * A prova pode ser iniciada agora? Precisa estar publicada e,
+     * se houver data de liberação, essa data já ter chegado.
+     */
+    public function isAvailable(): bool
+    {
+        if (! $this->is_published) {
+            return false;
+        }
+
+        return is_null($this->available_at) || $this->available_at->lessThanOrEqualTo(now());
     }
 
     public function questions(): HasMany

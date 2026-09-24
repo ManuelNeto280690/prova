@@ -26,6 +26,8 @@ class ExamController extends Controller
                 'description' => $e->description,
                 'duration_minutes' => $e->duration_minutes,
                 'is_published' => $e->is_published,
+                'available_at' => $e->available_at?->format('d/m/Y H:i'),
+                'released' => $e->isAvailable(),
                 'questions_count' => $e->questions_count,
                 'finished_attempts' => $e->finished_attempts,
             ]);
@@ -55,6 +57,7 @@ class ExamController extends Controller
                 'description' => $exam->description,
                 'duration_minutes' => $exam->duration_minutes,
                 'is_published' => $exam->is_published,
+                'available_at' => $exam->available_at?->format('Y-m-d\TH:i'),
                 'questions' => $exam->questions->map(fn ($q) => [
                     'statement' => $q->statement,
                     'correct_index' => $q->options->search(fn ($o) => $o->is_correct),
@@ -76,6 +79,7 @@ class ExamController extends Controller
                 'description' => $data['description'] ?? null,
                 'duration_minutes' => $data['duration_minutes'],
                 'is_published' => $data['is_published'] ?? false,
+                'available_at' => $data['available_at'] ?? null,
                 'created_by' => $request->user()->id,
             ]);
 
@@ -96,9 +100,13 @@ class ExamController extends Controller
                 'description' => ['nullable', 'string'],
                 'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
                 'is_published' => ['boolean'],
+                'available_at' => ['nullable', 'date'],
             ]);
 
-            $exam->update($data);
+            $exam->update([
+                ...$data,
+                'available_at' => $data['available_at'] ?? null,
+            ]);
 
             return redirect()->route('admin.exams.index')
                 ->with('flash', 'Prova atualizada (questões bloqueadas: já possui tentativas).');
@@ -112,6 +120,7 @@ class ExamController extends Controller
                 'description' => $data['description'] ?? null,
                 'duration_minutes' => $data['duration_minutes'],
                 'is_published' => $data['is_published'] ?? false,
+                'available_at' => $data['available_at'] ?? null,
             ]);
 
             $exam->questions()->delete(); // cascades to options
@@ -153,6 +162,7 @@ class ExamController extends Controller
                 'score' => $a->score,
                 'correct_count' => $a->correct_count,
                 'total_questions' => $a->total_questions,
+                'violations_count' => (int) ($a->violations_count ?? 0),
                 'started_at' => $a->started_at?->format('d/m/Y H:i'),
                 'finished_at' => $a->finished_at?->format('d/m/Y H:i'),
             ]);
@@ -174,6 +184,7 @@ class ExamController extends Controller
             'description' => ['nullable', 'string'],
             'duration_minutes' => ['required', 'integer', 'min:1', 'max:600'],
             'is_published' => ['boolean'],
+            'available_at' => ['nullable', 'date'],
             'questions' => ['required', 'array', 'min:1'],
             'questions.*.statement' => ['required', 'string'],
             'questions.*.correct_index' => ['required', 'integer', 'min:0'],

@@ -18,6 +18,7 @@ export default function ExamEditor({ exam, locked }) {
         description: exam?.description ?? '',
         duration_minutes: exam?.duration_minutes ?? 30,
         is_published: exam?.is_published ?? false,
+        available_at: exam?.available_at ?? '',
         questions: exam?.questions?.length ? exam.questions : [blankQuestion()],
     });
 
@@ -90,6 +91,27 @@ export default function ExamEditor({ exam, locked }) {
                                     className="rounded border-white/20 bg-ink-900 text-brand-500 focus:ring-brand-400/40" />
                                 <span className="text-sm text-slate-200">Publicar (visível aos alunos)</span>
                             </label>
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className="label flex items-center gap-1.5">
+                                <IconClock className="h-4 w-4" /> Liberar a prova em (data e hora)
+                            </label>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <input type="datetime-local" className="input sm:max-w-xs"
+                                    value={data.available_at ?? ''}
+                                    onChange={(e) => setData('available_at', e.target.value)} />
+                                {data.available_at && (
+                                    <button type="button" onClick={() => setData('available_at', '')}
+                                        className="text-sm font-medium text-slate-400 hover:text-slate-200">
+                                        Limpar
+                                    </button>
+                                )}
+                            </div>
+                            {errors.available_at && <p className="mt-1.5 text-sm text-red-400">{errors.available_at}</p>}
+                            <p className="mt-1.5 text-xs text-slate-500">
+                                Antes desta data o aluno vê a prova, mas não consegue iniciá-la.
+                                Deixe em branco para liberar assim que publicar.
+                            </p>
                         </div>
                     </div>
                 </Reveal>

@@ -22,6 +22,7 @@ export default function ExamResults({ exam, attempts }) {
     const avg = finished.length
         ? Math.round(finished.reduce((s, a) => s + a.score, 0) / finished.length)
         : 0;
+    const totalViolations = attempts.reduce((acc, a) => acc + (a.violations_count || 0), 0);
 
     return (
         <AdminLayout
@@ -34,7 +35,7 @@ export default function ExamResults({ exam, attempts }) {
         >
             <Head title={`Resultados — ${exam.title}`} />
 
-            <div className="mb-6 grid gap-4 sm:grid-cols-3">
+            <div className="mb-6 grid gap-4 sm:grid-cols-4">
                 <div className="glass p-5">
                     <p className="text-sm text-slate-400">Realizadas</p>
                     <p className="mt-1 text-3xl font-bold text-white">{finished.length}</p>
@@ -42,6 +43,12 @@ export default function ExamResults({ exam, attempts }) {
                 <div className="glass p-5">
                     <p className="text-sm text-slate-400">Média geral</p>
                     <p className={`mt-1 text-3xl font-bold ${scoreColor(avg)}`}>{avg}%</p>
+                </div>
+                <div className="glass p-5">
+                    <p className="text-sm text-slate-400">Alertas de Tela/Aba</p>
+                    <p className={`mt-1 text-3xl font-bold ${totalViolations > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                        {totalViolations}
+                    </p>
                 </div>
                 <div className="glass p-5">
                     <p className="text-sm text-slate-400">Tempo limite</p>
@@ -74,11 +81,22 @@ export default function ExamResults({ exam, attempts }) {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-4">
+                                <div className="flex flex-wrap items-center gap-4">
                                     <div className="text-right">
                                         <p className="text-xs text-slate-500">Acertos</p>
                                         <p className="text-sm font-medium text-slate-300">{a.correct_count}/{a.total_questions}</p>
                                     </div>
+
+                                    {a.violations_count > 0 ? (
+                                        <span className="chip border border-red-500/40 bg-red-500/15 text-red-300 font-semibold" title="Aluno saiu da tela cheia ou alternou de aba">
+                                            ⚠️ {a.violations_count} {a.violations_count === 1 ? 'saída' : 'saídas'}
+                                        </span>
+                                    ) : (
+                                        <span className="chip border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs">
+                                            0 infrações
+                                        </span>
+                                    )}
+
                                     <span className={`chip border ${statusChip[a.status]}`}>{statusLabel[a.status]}</span>
                                     <span className={`w-14 text-right text-2xl font-bold ${scoreColor(a.score)}`}>
                                         {a.status === 'in_progress' ? '—' : `${a.score}%`}

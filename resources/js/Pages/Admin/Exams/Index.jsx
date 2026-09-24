@@ -68,6 +68,17 @@ export default function ExamsIndex({ exams }) {
                                 <span className="flex items-center gap-1.5"><IconChart className="h-4 w-4" /> {e.finished_attempts} realizadas</span>
                             </div>
 
+                            {e.available_at && (
+                                <div className={`mt-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+                                    e.released
+                                        ? 'border-emerald-400/20 bg-emerald-500/5 text-emerald-200/90'
+                                        : 'border-amber-400/20 bg-amber-500/5 text-amber-200/90'
+                                }`}>
+                                    <IconClock className="h-4 w-4 shrink-0" />
+                                    {e.released ? 'Liberada desde' : 'Liberação agendada para'} {e.available_at}
+                                </div>
+                            )}
+
                             <div className="mt-6 flex items-center gap-2 border-t border-white/5 pt-4">
                                 <Link href={route('admin.exams.results', e.id)} className="btn-ghost flex-1">
                                     <IconEye className="h-4 w-4" /> Resultados

@@ -44,6 +44,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'flash' => [
                 'message' => fn () => $request->session()->get('flash'),
+                'warning' => fn () => $request->session()->get('warning'),
                 'generatedCredential' => fn () => $request->session()->get('generatedCredential'),
             ],
         ];
