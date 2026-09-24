@@ -26,7 +26,10 @@ class ExamController extends Controller
                 'description' => $e->description,
                 'duration_minutes' => $e->duration_minutes,
                 'is_published' => $e->is_published,
-                'available_at' => $e->available_at?->format('d/m/Y H:i'),
+                'is_active' => (bool) $e->is_active,
+                'activated_at' => $e->activated_at?->format('d/m/Y H:i:s'),
+                'seconds_remaining' => $e->secondsRemaining(),
+                'is_expired' => $e->isExpired(),
                 'released' => $e->isAvailable(),
                 'questions_count' => $e->questions_count,
                 'finished_attempts' => $e->finished_attempts,
@@ -139,6 +142,40 @@ class ExamController extends Controller
         $exam->update(['is_published' => ! $exam->is_published]);
 
         return back()->with('flash', $exam->is_published ? 'Prova publicada.' : 'Prova despublicada.');
+    }
+
+    public function activate(Exam $exam): RedirectResponse
+    {
+        if ($exam->questions()->count() === 0) {
+            return back()->withErrors(['activate' => 'Adicione ao menos uma questão antes de ativar a prova.']);
+        }
+
+        $exam->update([
+            'is_published' => true,
+            'is_active' => true,
+            'activated_at' => now(),
+        ]);
+
+        return back()->with('flash', "Prova \"{$exam->title}\" ativada com sucesso! A contagem regressiva de {$exam->duration_minutes} minutos começou para todos os alunos.");
+    }
+
+    public function close(Exam $exam): RedirectResponse
+    {
+        $exam->update([
+            'is_active' => false,
+        ]);
+
+        return back()->with('flash', "Prova \"{$exam->title}\" encerrada para novos envios.");
+    }
+
+    public function resetActivation(Exam $exam): RedirectResponse
+    {
+        $exam->update([
+            'is_active' => false,
+            'activated_at' => null,
+        ]);
+
+        return back()->with('flash', "Ativação da prova \"{$exam->title}\" reiniciada. Ela está pronta para ser ativada novamente quando desejar.");
     }
 
     public function destroy(Exam $exam): RedirectResponse

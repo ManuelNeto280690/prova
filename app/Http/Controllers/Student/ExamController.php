@@ -28,6 +28,9 @@ class ExamController extends Controller
             ->get()
             ->map(function (Exam $exam) use ($attempts) {
                 $attempt = $attempts->get($exam->id);
+                $isAvailable = $exam->isAvailable();
+                $isExpired = $exam->isExpired();
+                $waiting = ! $exam->activated_at || ! $exam->is_active;
 
                 return [
                     'id' => $exam->id,
@@ -35,8 +38,12 @@ class ExamController extends Controller
                     'description' => $exam->description,
                     'duration_minutes' => $exam->duration_minutes,
                     'questions_count' => $exam->questions_count,
-                    'released' => $exam->isAvailable(),
-                    'available_at' => $exam->available_at?->format('d/m/Y \à\s H:i'),
+                    'is_active' => (bool) $exam->is_active,
+                    'activated_at' => $exam->activated_at?->format('H:i'),
+                    'released' => $isAvailable,
+                    'waiting_for_teacher' => $waiting && ! $isExpired,
+                    'seconds_remaining' => $exam->secondsRemaining(),
+                    'is_expired' => $isExpired,
                     'attempt' => $attempt ? [
                         'status' => $attempt->status,
                         'score' => $attempt->score,
@@ -68,16 +75,18 @@ class ExamController extends Controller
                 ->with('flash', 'Você já concluiu esta prova.');
         }
 
-        // Scheduled release: cannot start before the admin-defined time.
-        // (Server-side guard — the front-end also blocks it.)
-        if (! $attempt->exists && ! $exam->isAvailable()) {
-            $when = $exam->available_at?->format('d/m/Y \à\s H:i');
+        // Live activation rule: student can only start if professor activated the exam.
+        if (! $exam->isAvailable()) {
+            if ($exam->isExpired() || ($exam->activated_at && ! $exam->is_active)) {
+                return redirect()->route('student.dashboard')->with(
+                    'warning',
+                    'O tempo desta prova expirou ou ela foi encerrada pelo professor.'
+                );
+            }
 
             return redirect()->route('student.dashboard')->with(
                 'warning',
-                $when
-                    ? "A prova ainda não foi liberada. Ela estará disponível em {$when}."
-                    : 'A prova ainda não foi liberada pelo administrador.'
+                'Aguarde o professor ativar a prova no painel.'
             );
         }
 
@@ -106,17 +115,16 @@ class ExamController extends Controller
             ->first();
 
         if (! $attempt) {
-            // No attempt yet and not released → send back with a notice.
             if (! $exam->isAvailable()) {
                 return redirect()->route('student.dashboard')
-                    ->with('warning', 'A prova ainda não foi liberada pelo administrador.');
+                    ->with('warning', 'Aguarde o professor ativar a prova.');
             }
 
             return redirect()->route('student.dashboard');
         }
 
-        // Server clock decides everything. If time is already up, finalize now.
-        if (! $attempt->isFinished() && $attempt->secondsRemaining() <= 0) {
+        // Server clock decides everything. If exam time is up, finalize now.
+        if (! $attempt->isFinished() && ($attempt->secondsRemaining() <= 0 || ! $exam->is_active)) {
             $this->finalize($attempt, $exam, [], Attempt::STATUS_EXPIRED);
         }
 

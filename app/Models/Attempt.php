@@ -62,8 +62,12 @@ class Attempt extends Model
      */
     public function secondsRemaining(): int
     {
+        if ($this->exam && $this->exam->activated_at) {
+            return $this->exam->secondsRemaining();
+        }
+
         if (! $this->started_at) {
-            return $this->exam->duration_minutes * 60;
+            return $this->exam ? $this->exam->duration_minutes * 60 : 0;
         }
 
         $deadline = $this->started_at->copy()->addMinutes($this->exam->duration_minutes);

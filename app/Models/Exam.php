@@ -16,6 +16,8 @@ class Exam extends Model
         'description',
         'duration_minutes',
         'is_published',
+        'is_active',
+        'activated_at',
         'available_at',
         'created_by',
     ];
@@ -24,22 +26,38 @@ class Exam extends Model
     {
         return [
             'is_published' => 'boolean',
+            'is_active' => 'boolean',
+            'activated_at' => 'datetime',
             'duration_minutes' => 'integer',
             'available_at' => 'datetime',
         ];
     }
 
     /**
-     * A prova pode ser iniciada agora? Precisa estar publicada e,
-     * se houver data de liberação, essa data já ter chegado.
+     * Seconds remaining for the entire exam based on collective activation.
+     */
+    public function secondsRemaining(): int
+    {
+        if (! $this->activated_at) {
+            return $this->duration_minutes * 60;
+        }
+
+        $deadline = $this->activated_at->copy()->addMinutes($this->duration_minutes);
+
+        return max(0, now()->diffInSeconds($deadline, false));
+    }
+
+    /**
+     * A prova está liberada agora?
+     * Precisa estar publicada, ativada pelo professor e dentro do tempo.
      */
     public function isAvailable(): bool
     {
-        if (! $this->is_published) {
+        if (! $this->is_published || ! $this->is_active || ! $this->activated_at) {
             return false;
         }
 
-        return is_null($this->available_at) || $this->available_at->lessThanOrEqualTo(now());
+        return $this->secondsRemaining() > 0;
     }
 
     public function questions(): HasMany

@@ -74,6 +74,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/provas/{exam}/editar', [AdminExamController::class, 'edit'])->name('exams.edit');
     Route::put('/provas/{exam}', [AdminExamController::class, 'update'])->name('exams.update');
     Route::post('/provas/{exam}/publicar', [AdminExamController::class, 'togglePublish'])->name('exams.publish');
+    Route::post('/provas/{exam}/ativar', [AdminExamController::class, 'activate'])->name('exams.activate');
+    Route::post('/provas/{exam}/encerrar', [AdminExamController::class, 'close'])->name('exams.close');
+    Route::post('/provas/{exam}/resetar-ativacao', [AdminExamController::class, 'resetActivation'])->name('exams.resetActivation');
     Route::delete('/provas/{exam}', [AdminExamController::class, 'destroy'])->name('exams.destroy');
     Route::get('/provas/{exam}/resultados', [AdminExamController::class, 'results'])->name('exams.results');
 });
